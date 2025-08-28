@@ -1,0 +1,7 @@
+# Ignore source files during deployment
+src/
+*.ts
+*.tsx
+vite.config.ts
+tsconfig.json
+tsconfig.*.json
