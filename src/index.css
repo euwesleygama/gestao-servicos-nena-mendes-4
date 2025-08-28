@@ -1,0 +1,145 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Monochromatic Minimalist Palette */
+    --neutral-50: 210 20% 98%; /* #f9fafb - background suave */
+    --neutral-100: 210 16% 95%; /* variação mais clara */
+    --neutral-200: 210 16% 90%; /* #e5e7eb - cinza claro para bordas */
+    --neutral-300: 210 16% 85%; /* variação intermediária */
+    --neutral-400: 213 13% 65%; /* #9ca3af - cinza médio para subtextos */
+    --neutral-500: 213 15% 50%; /* variação intermediária */
+    --neutral-600: 213 19% 32%; /* #374151 - cinza escuro para textos */
+    --neutral-700: 213 25% 25%; /* variação mais escura */
+    --neutral-800: 213 30% 15%; /* variação mais escura */
+    --neutral-900: 0 0% 0%; /* #000000 - preto principal */
+    --neutral-950: 0 0% 0%; /* #000000 - preto principal */
+
+    /* Shadcn Color System - Paleta Monocromática Minimalista */
+    --background: 210 20% 98%; /* #f9fafb - background suave */
+    --foreground: 0 0% 0%; /* #000000 - preto principal */
+
+    --card: 0 0% 100%; /* #ffffff - branco principal */
+    --card-foreground: 0 0% 0%; /* #000000 - preto principal */
+
+    --popover: 0 0% 100%; /* #ffffff - branco principal */
+    --popover-foreground: 0 0% 0%; /* #000000 - preto principal */
+
+    --primary: 0 0% 0%; /* #000000 - preto principal */
+    --primary-foreground: 0 0% 100%; /* #ffffff - branco principal */
+
+    --secondary: 0 0% 100%; /* #ffffff - branco principal */
+    --secondary-foreground: 0 0% 0%; /* #000000 - preto principal */
+
+    --muted: 210 20% 98%; /* #f9fafb - background suave */
+    --muted-foreground: 213 13% 65%; /* #9ca3af - cinza médio */
+
+    --accent: 210 20% 98%; /* #f9fafb - background suave */
+    --accent-foreground: 0 0% 0%; /* #000000 - preto principal */
+
+    --destructive: 0 84.2% 60.2%; /* vermelho para erros */
+    --destructive-foreground: 0 0% 100%; /* #ffffff - branco principal */
+
+    --border: 210 16% 90%; /* #e5e7eb - cinza claro para bordas */
+    --input: 0 0% 100%; /* #ffffff - branco principal */
+    --ring: 0 0% 0%; /* #000000 - preto principal */
+
+    --radius: 0.75rem;
+
+    /* Custom Beauty System - Paleta Monocromática Profissional */
+    --beauty-primary: 0 0% 0%; /* #000000 - preto puro para títulos principais */
+    --beauty-primary-light: 0 0% 20%; /* #333333 - cinza escuro para texto principal */
+    --beauty-secondary: 0 0% 100%; /* #ffffff - branco puro para cards/inputs */
+    --beauty-accent: 0 0% 60%; /* #999999 - cinza claro para placeholders/labels */
+    --beauty-neutral: 0 0% 96%; /* #f5f5f5 - cinza off-white para background */
+    --beauty-button: 0 0% 10%; /* #1a1a1a - preto suave para botões */
+    --beauty-subtitle: 0 0% 40%; /* #666666 - cinza médio para subtítulos */
+    --beauty-border: 0 0% 80%; /* #cccccc - cinza muito claro para bordas */
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(0 0% 0%), hsl(213 19% 32%));
+    --gradient-secondary: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 20% 98%));
+    
+    /* Shadows */
+    --shadow-soft: 0 4px 12px -2px hsl(0 0% 0% / 0.1);
+    --shadow-elegant: 0 8px 25px -5px hsl(0 0% 0% / 0.15);
+    
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --radius: 0.75rem;
+
+    /* Sidebar - Paleta Monocromática */
+    --sidebar-background: 0 0% 100%; /* #ffffff - branco principal */
+    --sidebar-foreground: 0 0% 0%; /* #000000 - preto principal */
+    --sidebar-primary: 0 0% 0%; /* #000000 - preto principal */
+    --sidebar-primary-foreground: 0 0% 100%; /* #ffffff - branco principal */
+    --sidebar-accent: 210 20% 98%; /* #f9fafb - background suave */
+    --sidebar-accent-foreground: 0 0% 0%; /* #000000 - preto principal */
+    --sidebar-border: 210 16% 90%; /* #e5e7eb - cinza claro para bordas */
+    --sidebar-ring: 0 0% 0%; /* #000000 - preto principal */
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+a[href*="lovable.dev"], 
+iframe[src*="lovable.dev"],
+div[style*="Edit with Lovable"],
+.lovable-badge {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  z-index: -9999 !important;
+}
