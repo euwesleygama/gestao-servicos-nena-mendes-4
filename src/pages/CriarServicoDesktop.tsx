@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { formatDateBR, formatNumberBR, getBrasiliaDate, getDateFnsLocale, createIdWithBrasiliaTimestamp } from "@/lib/date-utils";
+import { useServices, useProducts } from "@/hooks/use-supabase";
 
 // Interface para produtos do admin
 interface AdminProduct {
@@ -33,6 +34,8 @@ const convertAdminProductToModalFormat = (adminProduct: AdminProduct) => ({
 export default function CriarServicoDesktop() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { addService, loading: loadingService } = useServices();
+  const { products, loading: loadingProducts } = useProducts();
   
   const [novoServico, setNovoServico] = useState({
     nomeProfissional: "Profissional",
@@ -56,6 +59,7 @@ export default function CriarServicoDesktop() {
     categoria: string;
     imagem: string;
   }>>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Carregar produtos e dados salvos do localStorage quando o componente montar
   useEffect(() => {
@@ -78,16 +82,27 @@ export default function CriarServicoDesktop() {
         imagem: "/lovable-uploads/a9458181-099d-4115-8ba3-da6d9344619c.png"
       }];
       
-      const savedProducts = localStorage.getItem('adminProducts');
+      // Usar produtos do Supabase se disponíveis
       let produtosFormatados = [...produtosExemplo];
-      
-      if (savedProducts) {
-        try {
-          const adminProducts: AdminProduct[] = JSON.parse(savedProducts);
-          const produtosAdmin = adminProducts.map(convertAdminProductToModalFormat);
-          produtosFormatados = [...produtosExemplo, ...produtosAdmin];
-        } catch (error) {
-          console.error('Erro ao carregar produtos:', error);
+      if (products && products.length > 0) {
+        const produtosSupabase = products.map(product => ({
+          id: product.id,
+          nome: product.name,
+          categoria: product.category?.name || 'Sem categoria',
+          imagem: product.image_url || "/lovable-uploads/a9458181-099d-4115-8ba3-da6d9344619c.png"
+        }));
+        produtosFormatados = [...produtosExemplo, ...produtosSupabase];
+      } else {
+        // Fallback para localStorage se não há produtos do Supabase
+        const savedProducts = localStorage.getItem('adminProducts');
+        if (savedProducts) {
+          try {
+            const adminProducts: AdminProduct[] = JSON.parse(savedProducts);
+            const produtosAdmin = adminProducts.map(convertAdminProductToModalFormat);
+            produtosFormatados = [...produtosExemplo, ...produtosAdmin];
+          } catch (error) {
+            console.error('Erro ao carregar produtos:', error);
+          }
         }
       }
       setProdutosDisponiveis(produtosFormatados);
@@ -122,8 +137,10 @@ export default function CriarServicoDesktop() {
     }
   }, []);
 
-  const handleSubmitServico = (e: React.FormEvent) => {
+  const handleSubmitServico = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isSubmitting) return; // Prevenir múltiplas submissões
     
     if (!novoServico.nomeCliente || !novoServico.nomeServico) {
       toast({
@@ -134,26 +151,81 @@ export default function CriarServicoDesktop() {
       return;
     }
 
-    // Adicionar o serviço à lista de salvos
-    const novoServicoSalvo = {
-      id: createIdWithBrasiliaTimestamp('SRV'),
-      ...novoServico,
-      dataCriacao: formatDateBR(getBrasiliaDate()),
-      status: 'pendente'
-    };
+    setIsSubmitting(true);
 
-    // Salvar no localStorage para sincronização com admin
-    const servicosRecebidos = JSON.parse(localStorage.getItem('servicosRecebidos') || '[]');
-    servicosRecebidos.unshift(novoServicoSalvo);
-    localStorage.setItem('servicosRecebidos', JSON.stringify(servicosRecebidos));
-    
-    toast({
-      title: "Serviço criado com sucesso!",
-      description: `Serviço ${novoServico.nomeServico} para ${novoServico.nomeCliente} foi registrado.`
-    });
+    try {
+      console.log('🔧 Iniciando criação de serviço...');
+      
+      // Preparar dados do serviço para o Supabase
+      const servicoData = {
+        professional_name: novoServico.nomeProfissional,
+        client_name: novoServico.nomeCliente,
+        service_name: novoServico.nomeServico,
+        service_date: dataServico ? dataServico.toISOString().split('T')[0] : getBrasiliaDate().toISOString().split('T')[0],
+        status: 'pending' as const
+      };
 
-    // Voltar para a página anterior
-    navigate(-1);
+      // Preparar produtos utilizados
+      const produtosUtilizados = novoServico.produtos
+        .filter(produto => produto.quantidade && produto.quantidade.trim() !== '')
+        .map(produto => ({
+          product_id: produto.id,
+          quantity_used: parseFloat(produto.quantidade.replace(',', '.')) || 0
+        }));
+
+      console.log('📝 Dados do serviço:', servicoData);
+      console.log('🛍️ Produtos utilizados:', produtosUtilizados);
+
+      // Chamar o hook do Supabase
+      const { data, error } = await addService(servicoData, produtosUtilizados);
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('✅ Serviço criado com sucesso no Supabase:', data);
+      
+      // Também salvar no localStorage como backup
+      const novoServicoSalvo = {
+        id: data?.id || createIdWithBrasiliaTimestamp('SRV'),
+        ...novoServico,
+        dataCriacao: formatDateBR(dataServico || getBrasiliaDate()),
+        status: 'pendente'
+      };
+
+      const servicosRecebidos = JSON.parse(localStorage.getItem('servicosRecebidos') || '[]');
+      servicosRecebidos.unshift(novoServicoSalvo);
+      localStorage.setItem('servicosRecebidos', JSON.stringify(servicosRecebidos));
+
+      // Voltar para a página anterior
+      navigate(-1);
+
+    } catch (error) {
+      console.error('❌ Erro ao criar serviço:', error);
+      
+      // Em caso de erro, salvar apenas no localStorage como fallback
+      const novoServicoSalvo = {
+        id: createIdWithBrasiliaTimestamp('SRV'),
+        ...novoServico,
+        dataCriacao: formatDateBR(dataServico || getBrasiliaDate()),
+        status: 'pendente'
+      };
+
+      const servicosRecebidos = JSON.parse(localStorage.getItem('servicosRecebidos') || '[]');
+      servicosRecebidos.unshift(novoServicoSalvo);
+      localStorage.setItem('servicosRecebidos', JSON.stringify(servicosRecebidos));
+      
+      toast({
+        title: "Serviço salvo localmente",
+        description: "Não foi possível sincronizar com o servidor, mas o serviço foi salvo localmente.",
+        variant: "default"
+      });
+
+      // Ainda assim navegar de volta
+      navigate(-1);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const selecionarProduto = (produto: typeof produtosDisponiveis[0]) => {
@@ -383,14 +455,19 @@ export default function CriarServicoDesktop() {
 
         {/* Botões de ação */}
         <div className="flex gap-3 pt-6">
-          <Button type="submit" className="flex-1">
-            SALVAR
+          <Button 
+            type="submit" 
+            className="flex-1" 
+            disabled={isSubmitting || loadingService}
+          >
+            {isSubmitting ? "SALVANDO..." : "SALVAR"}
           </Button>
           <Button 
             type="button" 
             variant="outline" 
             className="flex-1" 
             onClick={() => navigate(-1)}
+            disabled={isSubmitting}
           >
             CANCELAR
           </Button>

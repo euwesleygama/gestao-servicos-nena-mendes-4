@@ -114,3 +114,4 @@ O erro 404 acontece porque:
 ---
 
 **💡 Dica:** Sempre que fizer mudanças em configuração de deploy, faça um novo commit e push para acionar o deploy automático da Vercel.
+

@@ -66,6 +66,11 @@ export const useAuth = () => {
     try {
       console.log('🔐 useAuth.signIn: Tentando login para:', email);
       
+      // Verificar se as variáveis de ambiente estão configuradas
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        throw new Error('Configuração do Supabase não encontrada. Verifique as variáveis de ambiente.');
+      }
+      
       // Adicionar timeout para a requisição
       const loginPromise = supabase.auth.signInWithPassword({
         email,
@@ -73,7 +78,7 @@ export const useAuth = () => {
       });
 
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout: A conexão demorou muito')), 8000);
+        setTimeout(() => reject(new Error('Timeout: A conexão demorou muito')), 10000);
       });
 
       const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as any;
@@ -107,6 +112,10 @@ export const useAuth = () => {
         errorMessage = "Conexão muito lenta. Verifique sua internet.";
       } else if (errorMsg.includes("fetch")) {
         errorMessage = "Problema de conexão. Verifique sua internet.";
+      } else if (errorMsg.includes("Configuração do Supabase")) {
+        errorMessage = "Erro de configuração. Entre em contato com o suporte.";
+      } else if (errorMsg.includes("Failed to fetch")) {
+        errorMessage = "Sem conexão com a internet. Verifique sua rede.";
       }
       
       toast({

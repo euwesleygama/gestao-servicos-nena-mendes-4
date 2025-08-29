@@ -154,3 +154,4 @@ Se após aplicar todas as correções o erro persistir:
 ---
 
 **⚠️ Importante**: Esta configuração segue exatamente as recomendações da documentação oficial da Vercel para SPAs com Vite + React Router.
+

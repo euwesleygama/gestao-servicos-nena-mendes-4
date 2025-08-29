@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { formatDateBR, formatNumberBR, getBrasiliaDate, getDateFnsLocale, createIdWithBrasiliaTimestamp } from "@/lib/date-utils";
+import { useServices } from "@/hooks/use-supabase";
 
 // Interface para produtos do admin
 interface AdminProduct {
@@ -32,6 +33,7 @@ export default function CriarServicoMobile() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { addService, loading: loadingService } = useServices();
   
   console.log('🔄 CriarServicoMobile renderizado, pathname:', location.pathname);
   
@@ -50,6 +52,7 @@ export default function CriarServicoMobile() {
   
   const [dataServico, setDataServico] = useState<Date>();
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Effect para carregar dados salvos - EXECUTA SEMPRE que o componente monta
   useEffect(() => {
@@ -126,8 +129,10 @@ export default function CriarServicoMobile() {
     console.log('🏁 Carregamento concluído');
   }, []); // Executa apenas na montagem do componente
 
-  const handleSubmitServico = (e: React.FormEvent) => {
+  const handleSubmitServico = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isSubmitting) return; // Prevenir múltiplas submissões
     
     if (!novoServico.nomeCliente || !novoServico.nomeServico) {
       toast({
@@ -138,30 +143,89 @@ export default function CriarServicoMobile() {
       return;
     }
 
-    // Adicionar o serviço à lista de salvos
-    const novoServicoSalvo = {
-      id: createIdWithBrasiliaTimestamp('SRV'),
-      ...novoServico,
-      dataCriacao: dataServico ? formatDateBR(dataServico) : formatDateBR(getBrasiliaDate()),
-      status: 'pendente'
-    };
+    setIsSubmitting(true);
 
-    // Salvar no localStorage para sincronização com admin
-    const servicosRecebidos = JSON.parse(localStorage.getItem('servicosRecebidos') || '[]');
-    servicosRecebidos.unshift(novoServicoSalvo);
-    localStorage.setItem('servicosRecebidos', JSON.stringify(servicosRecebidos));
-    
-    // Limpar dados temporários do sessionStorage
-    sessionStorage.removeItem('formularioServicoTemp');
-    sessionStorage.removeItem('produtosSelecionadosTemp');
-    
-    toast({
-      title: "Serviço criado com sucesso!",
-      description: `Serviço ${novoServico.nomeServico} para ${novoServico.nomeCliente} foi registrado.`
-    });
+    try {
+      console.log('🔧 [Mobile] Iniciando criação de serviço...');
+      
+      // Preparar dados do serviço para o Supabase
+      const servicoData = {
+        professional_name: novoServico.nomeProfissional,
+        client_name: novoServico.nomeCliente,
+        service_name: novoServico.nomeServico,
+        service_date: dataServico ? dataServico.toISOString().split('T')[0] : getBrasiliaDate().toISOString().split('T')[0],
+        status: 'pending' as const
+      };
 
-    // Voltar para a página anterior
-    navigate(-1);
+      // Preparar produtos utilizados
+      const produtosUtilizados = novoServico.produtos
+        .filter(produto => produto.quantidade && produto.quantidade.trim() !== '')
+        .map(produto => ({
+          product_id: produto.id,
+          quantity_used: parseFloat(produto.quantidade.replace(',', '.')) || 0
+        }));
+
+      console.log('📝 [Mobile] Dados do serviço:', servicoData);
+      console.log('🛍️ [Mobile] Produtos utilizados:', produtosUtilizados);
+
+      // Chamar o hook do Supabase
+      const { data, error } = await addService(servicoData, produtosUtilizados);
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('✅ [Mobile] Serviço criado com sucesso no Supabase:', data);
+      
+      // Também salvar no localStorage como backup
+      const novoServicoSalvo = {
+        id: data?.id || createIdWithBrasiliaTimestamp('SRV'),
+        ...novoServico,
+        dataCriacao: dataServico ? formatDateBR(dataServico) : formatDateBR(getBrasiliaDate()),
+        status: 'pendente'
+      };
+
+      const servicosRecebidos = JSON.parse(localStorage.getItem('servicosRecebidos') || '[]');
+      servicosRecebidos.unshift(novoServicoSalvo);
+      localStorage.setItem('servicosRecebidos', JSON.stringify(servicosRecebidos));
+      
+      // Limpar dados temporários do sessionStorage
+      sessionStorage.removeItem('formularioServicoTemp');
+      sessionStorage.removeItem('produtosSelecionadosTemp');
+
+      // Voltar para a página anterior
+      navigate(-1);
+
+    } catch (error) {
+      console.error('❌ [Mobile] Erro ao criar serviço:', error);
+      
+      // Em caso de erro, salvar apenas no localStorage como fallback
+      const novoServicoSalvo = {
+        id: createIdWithBrasiliaTimestamp('SRV'),
+        ...novoServico,
+        dataCriacao: dataServico ? formatDateBR(dataServico) : formatDateBR(getBrasiliaDate()),
+        status: 'pendente'
+      };
+
+      const servicosRecebidos = JSON.parse(localStorage.getItem('servicosRecebidos') || '[]');
+      servicosRecebidos.unshift(novoServicoSalvo);
+      localStorage.setItem('servicosRecebidos', JSON.stringify(servicosRecebidos));
+      
+      // Limpar dados temporários do sessionStorage
+      sessionStorage.removeItem('formularioServicoTemp');
+      sessionStorage.removeItem('produtosSelecionadosTemp');
+      
+      toast({
+        title: "Serviço salvo localmente",
+        description: "Não foi possível sincronizar com o servidor, mas o serviço foi salvo localmente.",
+        variant: "default"
+      });
+
+      // Ainda assim navegar de volta
+      navigate(-1);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const formatarNumero = (valor: string) => {
@@ -360,14 +424,19 @@ export default function CriarServicoMobile() {
 
         {/* Botões de ação */}
         <div className="flex gap-3 pt-6">
-          <Button type="submit" className="flex-1">
-            SALVAR
+          <Button 
+            type="submit" 
+            className="flex-1" 
+            disabled={isSubmitting || loadingService}
+          >
+            {isSubmitting ? "SALVANDO..." : "SALVAR"}
           </Button>
           <Button 
             type="button" 
             variant="outline" 
             className="flex-1 bg-white text-foreground border-2 border-border hover:bg-white" 
             onClick={() => navigate(-1)}
+            disabled={isSubmitting}
           >
             CANCELAR
           </Button>
